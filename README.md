@@ -15,6 +15,20 @@ Classic snake game with a modern, polished look.
 - **Pause/resume** with the spacebar
 - **Keyboard controls:** Arrow keys or WASD to move, Space to pause, Enter to restart
 
+### ❌⭕ Tic-Tac-Toe
+
+Classic two-player Tic-Tac-Toe with a sleek dark theme.
+
+- **Two-player** mode (X vs O) taking turns on the same screen
+- **Animated SVG marks** with pop-in effects and glow filters
+- **Win detection** with a striking line drawn across the winning cells
+- **Draw detection** with tie tracking
+- **Score tracking** for X, O, and ties
+- **Confetti celebration** on every win
+- **Hover previews** showing a ghost of your mark before placing
+- **Keyboard shortcut:** Press R to restart any time
+- **Mobile responsive** — works great on phones and tablets
+
 ## Getting Started
 
 1. Clone the repo:
