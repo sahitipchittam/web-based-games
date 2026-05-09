@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #0f0f1a;
+            font-family: 'Courier New', 'Consolas', monospace;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* Animated background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                linear-gradient(rgba(0, 255, 100, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 100, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .game-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        /* ─── Header ─────────────────────────────── */
+        .game-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #00ff64;
+            text-shadow: 0 0 20px rgba(0, 255, 100, 0.4), 0 0 40px rgba(0, 255, 100, 0.15);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .turn-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #555;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .turn-symbol {
+            font-size: 1.4rem;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .turn-symbol.x-turn {
+            color: #ff6b6b;
+            text-shadow: 0 0 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .turn-symbol.o-turn {
+            color: #4ecdc4;
+            text-shadow: 0 0 12px rgba(78, 205, 196, 0.4);
+        }
+
+        /* ─── Score panel ────────────────────────── */
+        .score-panel {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .score-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 60px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.3s ease;
+        }
+
+        .score-item.winner-glow-x {
+            border-color: rgba(255, 107, 107, 0.4);
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.1);
+        }
+
+        .score-item.winner-glow-o {
+            border-color: rgba(78, 205, 196, 0.4);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.1);
+        }
+
+        .score-symbol {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .score-item:nth-child(1) .score-symbol { color: #ff6b6b; }
+        .score-item:nth-child(2) .score-symbol { color: #4ecdc4; }
+        .score-item:nth-child(3) .score-symbol { color: #666; }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .score-label {
+            font-size: 0.6rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* ─── Board ──────────────────────────────── */
+        .board-container {
+            position: relative;
+            border: 2px solid rgba(0, 255, 100, 0.25);
+            border-radius: 12px;
+            box-shadow:
+                0 0 30px rgba(0, 255, 100, 0.06),
+                inset 0 0 30px rgba(0, 255, 100, 0.02);
+            overflow: hidden;
+            padding: 8px;
+            background: #12121f;
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        .board-container.game-over-x {
+            border-color: rgba(255, 107, 107, 0.4);
+            box-shadow: 0 0 40px rgba(255, 107, 107, 0.08);
+        }
+
+        .board-container.game-over-o {
+            border-color: rgba(78, 205, 196, 0.4);
+            box-shadow: 0 0 40px rgba(78, 205, 196, 0.08);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 4px;
+            width: 330px;
+            height: 330px;
+        }
+
+        .cell {
+            position: relative;
+            background: rgba(255, 255, 255, 0.015);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .cell:hover:not(.taken) {
+            background: rgba(0, 255, 100, 0.04);
+        }
+
+        .cell.taken {
+            cursor: default;
+        }
+
+        .cell.win-cell {
+            background: rgba(0, 255, 100, 0.08);
+            animation: winPulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes winPulse {
+            0%, 100% { background: rgba(0, 255, 100, 0.06); }
+            50% { background: rgba(0, 255, 100, 0.14); }
+        }
+
+        /* Cell hover preview */
+        .cell:not(.taken)::after {
+            content: '';
+            position: absolute;
+            inset: 25%;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .board.x-next .cell:not(.taken):hover::after {
+            content: '';
+            opacity: 0.1;
+            background: #ff6b6b;
+            clip-path: polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%);
+        }
+
+        .board.o-next .cell:not(.taken):hover::after {
+            content: '';
+            opacity: 0.1;
+            background: #4ecdc4;
+            border-radius: 50%;
+            inset: 28%;
+        }
+
+        /* ─── SVG marks ─────────────────────────── */
+        .mark {
+            width: 60%;
+            height: 60%;
+            pointer-events: none;
+        }
+
+        .mark-x {
+            animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .mark-o {
+            animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ─── Win line overlay ──────────────────── */
+        .win-line-overlay {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .win-line-overlay svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .win-line-path {
+            stroke-dasharray: 400;
+            stroke-dashoffset: 400;
+            animation: drawLine 0.5s ease forwards 0.2s;
+        }
+
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* ─── Controls ──────────────────────────── */
+        .game-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 10px 28px;
+            border: 1px solid rgba(0, 255, 100, 0.3);
+            background: rgba(0, 255, 100, 0.05);
+            color: #00ff64;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: rgba(0, 255, 100, 0.12);
+            border-color: rgba(0, 255, 100, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 100, 0.1);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+            background: rgba(0, 255, 100, 0.18);
+        }
+
+        .instructions {
+            color: #333;
+            font-size: 0.7rem;
+            text-align: center;
+            letter-spacing: 1px;
+            line-height: 1.6;
+        }
+
+        .instructions span {
+            color: #ff6b6b;
+        }
+
+        .instructions span.o {
+            color: #4ecdc4;
+        }
+
+        /* ─── Result banner ─────────────────────── */
+        .result-banner {
+            font-size: 1rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            min-height: 0;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: all 0.3s ease;
+        }
+
+        .result-banner.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-banner.x-wins { color: #ff6b6b; text-shadow: 0 0 10px rgba(255, 107, 107, 0.3); }
+        .result-banner.o-wins { color: #4ecdc4; text-shadow: 0 0 10px rgba(78, 205, 196, 0.3); }
+        .result-banner.draw { color: #888; }
+
+        /* ─── Confetti ─────────────────────────── */
+        .confetti-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            animation: confettiFall 1.5s ease-out forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-10vh) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(110vh) rotate(720deg) scale(0.3);
+                opacity: 0;
+            }
+        }
+
+        /* ─── Mobile ───────────────────────────── */
+        @media (max-width: 480px) {
+            .board {
+                width: 285px;
+                height: 285px;
+                gap: 3px;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+
+            .score-panel {
+                gap: 12px;
+            }
+
+            .score-item {
+                min-width: 50px;
+                padding: 8px 10px;
+            }
+
+            .score-value {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <!-- Header -->
+        <div class="game-header">
+            <h1 class="title">Tic-Tac-Toe</h1>
+            <div class="turn-indicator">
+                <span class="turn-symbol x-turn" id="turnSymbol">X</span>
+                <span id="turnLabel">TURN</span>
+            </div>
+        </div>
+
+        <!-- Result banner -->
+        <div class="result-banner" id="resultBanner"></div>
+
+        <!-- Score panel -->
+        <div class="score-panel">
+            <div class="score-item" id="scoreX">
+                <span class="score-symbol">✕</span>
+                <span class="score-value" id="scoreXVal">0</span>
+                <span class="score-label">Player X</span>
+            </div>
+            <div class="score-item" id="scoreTies">
+                <span class="score-symbol">—</span>
+                <span class="score-value" id="scoreTiesVal">0</span>
+                <span class="score-label">Ties</span>
+            </div>
+            <div class="score-item" id="scoreO">
+                <span class="score-symbol">◯</span>
+                <span class="score-value" id="scoreOVal">0</span>
+                <span class="score-label">Player O</span>
+            </div>
+        </div>
+
+        <!-- Board -->
+        <div class="board-container" id="boardContainer">
+            <div class="board" id="board"></div>
+            <div class="win-line-overlay" id="winLineOverlay"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="game-controls">
+            <button id="restartBtn">⟳ New Game</button>
+        </div>
+
+        <!-- Instructions -->
+        <p class="instructions">
+            <span>X</span> goes first &nbsp;|&nbsp; Click a cell to place your mark &nbsp;|&nbsp; <span class="o">O</span> follows &nbsp;|&nbsp; Press <span>R</span> to restart
+        </p>
+    </div>
+
+    <!-- Hidden SVG defs for glow filters (defined once, referenced globally) -->
+    <svg style="display: none;" aria-hidden="true">
+        <defs>
+            <filter id="glowX">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            <filter id="glowO">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            <filter id="winLineGlow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge>
+                    <feMergeNode in="blur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- Confetti -->
+    <div class="confetti-container" id="confetti"></div>
+
+    <script>
+        (function() {
+            // ─── DOM Elements ────────────────────────────
+            const board = document.getElementById('board');
+            const boardContainer = document.getElementById('boardContainer');
+            const winLineOverlay = document.getElementById('winLineOverlay');
+            const turnSymbol = document.getElementById('turnSymbol');
+            const turnLabel = document.getElementById('turnLabel');
+            const resultBanner = document.getElementById('resultBanner');
+            const restartBtn = document.getElementById('restartBtn');
+            const scoreXEl = document.getElementById('scoreXVal');
+            const scoreOEl = document.getElementById('scoreOVal');
+            const scoreTiesEl = document.getElementById('scoreTiesVal');
+            const scoreX = document.getElementById('scoreX');
+            const scoreO = document.getElementById('scoreO');
+            const confettiContainer = document.getElementById('confetti');
+
+            // ─── Game State ─────────────────────────────
+            let cells = Array(9).fill(null);
+            let currentPlayer = 'X';
+            let gameOver = false;
+            let winLine = null; // { cells: [indices], type: 'row'|'col'|'diag' }
+            let scores = { X: 0, O: 0, ties: 0 };
+
+            // ─── Render board ───────────────────────────
+            function createBoard() {
+                board.innerHTML = '';
+                for (let i = 0; i < 9; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.index = i;
+                    cell.addEventListener('click', () => handleCellClick(i));
+                    board.appendChild(cell);
+                }
+            }
+
+            function render() {
+                const cellEls = board.querySelectorAll('.cell');
+                cellEls.forEach((el, i) => {
+                    // Clear previous
+                    el.innerHTML = '';
+                    el.classList.remove('taken', 'win-cell');
+
+                    if (cells[i]) {
+                        el.classList.add('taken');
+                        const svg = cells[i] === 'X' ? createXSVG() : createOSVG();
+                        svg.classList.add(cells[i] === 'X' ? 'mark-x' : 'mark-o');
+                        el.appendChild(svg);
+                    }
+                });
+
+                // Highlight win cells
+                if (winLine) {
+                    winLine.cells.forEach(i => {
+                        cellEls[i].classList.add('win-cell');
+                    });
+                }
+
+                // Update board class for hover previews
+                board.classList.remove('x-next', 'o-next');
+                if (!gameOver) {
+                    board.classList.add(currentPlayer === 'X' ? 'x-next' : 'o-next');
+                }
+
+                // Update turn indicator
+                turnSymbol.textContent = gameOver ? '' : currentPlayer;
+                turnSymbol.classList.remove('x-turn', 'o-turn');
+                if (!gameOver) {
+                    turnSymbol.classList.add(currentPlayer === 'X' ? 'x-turn' : 'o-turn');
+                }
+                turnLabel.textContent = gameOver ? '' : 'TURN';
+
+                // Update scores
+                scoreXEl.textContent = scores.X;
+                scoreOEl.textContent = scores.O;
+                scoreTiesEl.textContent = scores.ties;
+            }
+
+            // ─── SVG marks ─────────────────────────────
+            function createXSVG() {
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.setAttribute('viewBox', '0 0 100 100');
+                svg.classList.add('mark');
+
+                const line1 = document.createElementNS(svgNS, 'line');
+                line1.setAttribute('x1', '20'); line1.setAttribute('y1', '20');
+                line1.setAttribute('x2', '80'); line1.setAttribute('y2', '80');
+                line1.setAttribute('stroke', '#ff6b6b');
+                line1.setAttribute('stroke-width', '10');
+                line1.setAttribute('stroke-linecap', 'round');
+                line1.setAttribute('filter', 'url(#glowX)');
+
+                const line2 = document.createElementNS(svgNS, 'line');
+                line2.setAttribute('x1', '80'); line2.setAttribute('y1', '20');
+                line2.setAttribute('x2', '20'); line2.setAttribute('y2', '80');
+                line2.setAttribute('stroke', '#ff6b6b');
+                line2.setAttribute('stroke-width', '10');
+                line2.setAttribute('stroke-linecap', 'round');
+                line2.setAttribute('filter', 'url(#glowX)');
+
+                svg.appendChild(line1);
+                svg.appendChild(line2);
+                return svg;
+            }
+
+            function createOSVG() {
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.setAttribute('viewBox', '0 0 100 100');
+                svg.classList.add('mark');
+
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', '50');
+                circle.setAttribute('cy', '50');
+                circle.setAttribute('r', '30');
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', '#4ecdc4');
+                circle.setAttribute('stroke-width', '10');
+                circle.setAttribute('filter', 'url(#glowO)');
+
+                svg.appendChild(circle);
+                return svg;
+            }
+
+            // ─── Win check ──────────────────────────────
+            const WIN_LINES = [
+                { indices: [0, 1, 2], type: 'row', pos: 0 },
+                { indices: [3, 4, 5], type: 'row', pos: 1 },
+                { indices: [6, 7, 8], type: 'row', pos: 2 },
+                { indices: [0, 3, 6], type: 'col', pos: 0 },
+                { indices: [1, 4, 7], type: 'col', pos: 1 },
+                { indices: [2, 5, 8], type: 'col', pos: 2 },
+                { indices: [0, 4, 8], type: 'diag', pos: 0 },
+                { indices: [2, 4, 6], type: 'diag', pos: 1 },
+            ];
+
+            function checkWin() {
+                for (const line of WIN_LINES) {
+                    const [a, b, c] = line.indices;
+                    if (cells[a] && cells[a] === cells[b] && cells[b] === cells[c]) {
+                        return { cells: line.indices, type: line.type, pos: line.pos };
+                    }
+                }
+                return null;
+            }
+
+            function isDraw() {
+                return cells.every(c => c !== null);
+            }
+
+            // ─── Win line SVG ──────────────────────────
+            function drawWinLine(line) {
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.setAttribute('viewBox', '0 0 300 300');
+                svg.style.overflow = 'visible';
+
+                const color = currentPlayer === 'X' ? '#ff6b6b' : '#4ecdc4';
+
+                let x1, y1, x2, y2;
+                const margin = 20;
+
+                if (line.type === 'row') {
+                    x1 = margin;
+                    y1 = 50 + line.pos * 100;
+                    x2 = 300 - margin;
+                    y2 = y1;
+                } else if (line.type === 'col') {
+                    x1 = 50 + line.pos * 100;
+                    y1 = margin;
+                    x2 = x1;
+                    y2 = 300 - margin;
+                } else if (line.type === 'diag') {
+                    if (line.pos === 0) {
+                        x1 = margin; y1 = margin;
+                        x2 = 300 - margin; y2 = 300 - margin;
+                    } else {
+                        x1 = 300 - margin; y1 = margin;
+                        x2 = margin; y2 = 300 - margin;
+                    }
+                }
+
+                const path = document.createElementNS(svgNS, 'line');
+                path.setAttribute('x1', x1); path.setAttribute('y1', y1);
+                path.setAttribute('x2', x2); path.setAttribute('y2', y2);
+                path.setAttribute('stroke', color);
+                path.setAttribute('stroke-width', '4');
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('opacity', '0.7');
+                path.setAttribute('filter', 'url(#winLineGlow)');
+                path.classList.add('win-line-path');
+
+                svg.appendChild(path);
+
+                winLineOverlay.innerHTML = '';
+                winLineOverlay.appendChild(svg);
+            }
+
+            // ─── Game logic ─────────────────────────────
+            function handleCellClick(index) {
+                if (gameOver || cells[index] !== null) return;
+
+                // Place mark
+                cells[index] = currentPlayer;
+                render();
+
+                // Check for win
+                const result = checkWin();
+                if (result) {
+                    winLine = result;
+                    gameOver = true;
+                    render();
+                    drawWinLine(result);
+
+                    // Update scores
+                    scores[currentPlayer]++;
+                    render();
+
+                    // Show result
+                    showResult(currentPlayer + ' wins!', currentPlayer === 'X' ? 'x-wins' : 'o-wins');
+
+                    // Highlight score
+                    if (currentPlayer === 'X') {
+                        boardContainer.classList.add('game-over-x');
+                        scoreX.classList.add('winner-glow-x');
+                    } else {
+                        boardContainer.classList.add('game-over-o');
+                        scoreO.classList.add('winner-glow-o');
+                    }
+
+                    spawnConfetti(currentPlayer);
+                    return;
+                }
+
+                // Check for draw
+                if (isDraw()) {
+                    gameOver = true;
+                    scores.ties++;
+                    render();
+                    showResult('Draw!', 'draw');
+                    return;
+                }
+
+                // Switch turns
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                render();
+            }
+
+            function showResult(text, className) {
+                resultBanner.textContent = text;
+                resultBanner.className = 'result-banner visible ' + className;
+                turnSymbol.classList.remove('x-turn', 'o-turn');
+                turnLabel.textContent = '';
+            }
+
+            // ─── Confetti ───────────────────────────────
+            function spawnConfetti(winner) {
+                const colors = winner === 'X'
+                    ? ['#ff6b6b', '#ff8787', '#ff4949', '#ffaaaa']
+                    : ['#4ecdc4', '#7eddd6', '#45b7aa', '#a8e6cf'];
+
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < 50; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'confetti-piece';
+                    piece.style.left = Math.random() * 100 + '%';
+                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    piece.style.animationDelay = Math.random() * 0.5 + 's';
+                    piece.style.animationDuration = (1 + Math.random() * 1.5) + 's';
+                    piece.style.width = (4 + Math.random() * 8) + 'px';
+                    piece.style.height = (4 + Math.random() * 8) + 'px';
+                    fragment.appendChild(piece);
+                }
+                confettiContainer.appendChild(fragment);
+
+                // Clean up confetti after animation
+                setTimeout(() => {
+                    confettiContainer.innerHTML = '';
+                }, 2500);
+            }
+
+            // ─── Reset ──────────────────────────────────
+            function restart() {
+                cells = Array(9).fill(null);
+                currentPlayer = 'X';
+                gameOver = false;
+                winLine = null;
+                winLineOverlay.innerHTML = '';
+                resultBanner.className = 'result-banner';
+                scoreX.classList.remove('winner-glow-x');
+                scoreO.classList.remove('winner-glow-o');
+                boardContainer.classList.remove('game-over-x', 'game-over-o');
+                confettiContainer.innerHTML = '';
+                render();
+            }
+
+            // ─── Event Listeners ────────────────────────
+            restartBtn.addEventListener('click', restart);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    restart();
+                }
+            });
+
+            // ─── Boot ───────────────────────────────────
+            createBoard();
+            render();
+        })();
+    </script>
+</body>
+</html>
